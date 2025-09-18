@@ -1,14 +1,16 @@
-# Use Java 21 as base image
+# ======================
+# Build stage
+# ======================
 FROM eclipse-temurin:21-jdk-jammy AS build
 
 WORKDIR /app
 
-# Copy Maven wrapper and pom.xml first for caching dependencies
+# Copy Maven wrapper and pom.xml first for dependency caching
 COPY mvnw* pom.xml ./
 COPY .mvn .mvn
 
-# Download dependencies
-RUN ./mvnw dependency:go-offline
+# Make mvnw executable & download dependencies
+RUN chmod +x mvnw && ./mvnw dependency:go-offline
 
 # Copy source code
 COPY src src
@@ -16,18 +18,16 @@ COPY src src
 # Build the application
 RUN ./mvnw clean package -DskipTests
 
-# -----------------------
-# Run Stage
-# -----------------------
+# ======================
+# Run stage
+# ======================
 FROM eclipse-temurin:21-jre-jammy
 
 WORKDIR /app
 
-# Copy the built jar from build stage
+# Copy built jar from build stage
 COPY --from=build /app/target/*.jar app.jar
 
-# Expose default Spring Boot port
 EXPOSE 9001
 
-# Run the app
 ENTRYPOINT ["java", "-jar", "app.jar"]
